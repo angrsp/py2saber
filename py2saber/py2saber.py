@@ -294,8 +294,10 @@ class Saber_Controller:
         """Reads the next line (terminated by b'\n') from the serial buffer.
 
         Note: this removes the line from the buffer."""
-        response = await self._ser.readline_async()
-        self.log.debug(f"Received response: {response}")
+        response = b'#'
+        while response.startswith(b'#'): # ignore debugging messages
+            response = await self._ser.readline_async()
+            self.log.debug(f"Received response: {response}")
         return response
 
     async def saber_is_ready(self) -> bool:
@@ -457,6 +459,9 @@ class Saber_Controller:
             config += await self._ser.read_async()
 
         self.log.debug(f"Raw config string: {config}")
+        # check for FW debug output
+        if config.startswith(b'#'):
+            config = b"\n".join(x for x in config.splitlines() if not x.startswith(b'#'))
         # slice off first and last char ('2' and '3')
         return config.decode().strip()[1:-1]
 
